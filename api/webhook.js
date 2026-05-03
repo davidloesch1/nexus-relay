@@ -1,36 +1,43 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(200).json({ message: 'Listening for pain...' });
+  console.log("--- DEBUG START ---");
+
+  // 1. Check if the API key even exists
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("ERROR: GEMINI_API_KEY is missing from Vercel settings!");
+    return res.status(500).json({ error: "API Key missing." });
   }
 
   const payload = req.body;
-  const errorMessage = payload.text || "Unknown Error";
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  console.log("--- SENSING PAIN, CONSULTING BRAIN ---");
-
+  const errorMessage = payload.text || "Test Connection";
+  
   try {
-    // Calling the Gemini API
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    
+    const response = await fetch(apiURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: `You are the Nexus Self-Healing AI. A website just reported this error: "${errorMessage}". Briefly explain what caused this and provide a 1-sentence fix.` }]
-        }]
+        contents: [{ parts: [{ text: `Explain this error: ${errorMessage}` }] }]
       })
     });
 
     const aiData = await response.json();
+
+    // 2. Log exactly what Google said
+    console.log("Google API Status:", response.status);
+    
+    if (!response.ok) {
+      console.error("Google API Error Details:", JSON.stringify(aiData));
+      return res.status(500).json({ error: "Google rejected the request", details: aiData });
+    }
+
     const aiAnalysis = aiData.candidates[0].content.parts[0].text;
+    console.log("SUCCESSFUL ANALYSIS:", aiAnalysis);
 
-    // Logging the "Aha!" moment
-    console.log("GEMINI ANALYSIS:", aiAnalysis);
+    return res.status(200).json({ status: "success", analysis: aiAnalysis });
 
-    return res.status(200).json({ status: 'AI Consulted', analysis: aiAnalysis });
-
-  } catch (error) {
-    console.error("Brain connection failed:", error);
-    return res.status(500).json({ error: 'The brain is offline.' });
+  } catch (err) {
+    console.error("CRITICAL SCRIPT ERROR:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 }
