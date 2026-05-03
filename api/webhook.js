@@ -1,11 +1,17 @@
-export default async function handler(req, res) {
+// Using module.exports for better compatibility with Vercel's default settings
+module.exports = async (req, res) => {
   console.log("--- NEXUS SURGERY INITIATED ---");
+
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return res.status(200).json({ message: 'Waiting for a signal...' });
+  }
 
   const payload = req.body;
   const errorMessage = payload.text || "Unknown error";
   
-  // 1. Ask Gemini for the fix AND the filename it thinks is responsible
   try {
+    // 1. Ask Gemini for the fix AND the filename
     const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -21,35 +27,31 @@ export default async function handler(req, res) {
     });
 
     const aiData = await aiResponse.json();
-    const result = JSON.parse(aiData.candidates[0].content.parts[0].text);
+    
+    // Safety check: ensure we got a valid response
+    if (!aiData.candidates || !aiData.candidates[0]) {
+      throw new Error("AI Brain failed to provide a candidate.");
+    }
+
+    const aiText = aiData.candidates[0].content.parts[0].text;
+    
+    // Clean up the AI text (sometimes it adds markdown code blocks)
+    const jsonString = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+    const result = JSON.parse(jsonString);
     
     console.log("AI PROPOSAL:", result.fix);
     console.log("TARGET FILE:", result.filename);
 
-    // 2. Respond to FullStory immediately so it doesn't time out
-    res.status(200).json({ status: "Proposing fix for " + result.filename });
-
-    // 3. (Optional Next Step) We will add the GitHub "Push" logic here in the next turn
-    // For now, let's just make sure Gemini can identify the right file!
+    // 2. Respond to FullStory
+    return res.status(200).json({ 
+      status: "Proposing fix", 
+      file: result.filename,
+      fix: result.fix 
+    });
 
   } catch (err) {
     console.error("SURGERY FAILED:", err.message);
-    return res.status(500).json({ error: err.message });
+    // If it fails, we still send a 200 to keep FullStory happy
+    return res.status(200).json({ error: "Surgery failed", details: err.message });
   }
-}
-    if (!response.ok) {
-      console.error("Google API Error:", JSON.stringify(aiData));
-      return res.status(response.status).json({ error: "AI Brain rejected request", details: aiData });
-    }
-
-    // Extraction logic remains the same for the current API
-    const aiAnalysis = aiData.candidates[0].content.parts[0].text;
-    console.log("BRAIN ANALYSIS:", aiAnalysis);
-
-    return res.status(200).json({ status: "success", analysis: aiAnalysis });
-
-  } catch (err) {
-    console.error("RELAY CRITICAL FAILURE:", err.message);
-    return res.status(500).json({ error: err.message });
-  }
-}
+};
