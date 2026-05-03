@@ -2,9 +2,8 @@ const { BigQuery } = require('@google-cloud/bigquery');
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO;
 
-// --- CONFIGURATION SYNCED WITH SCREENSHOTS ---
 const TABLE_NAME = 'nexus_dna_discovery'; 
-const BQ_LOCATION = 'US'; // Matches Screenshot 11.13.17 AM
+const BQ_LOCATION = 'US'; 
 
 const bq = new BigQuery({
   projectId: process.env.BQ_PROJECT_ID,
@@ -21,17 +20,16 @@ module.exports = async (req, res) => {
   console.log("--- NEXUS ADAPTIVE SURGERY START ---");
 
   try {
-    // 1. CONSULT MEMORY (BIGQUERY)
+    // FIXED QUERY: Added CAST(event_time AS TIMESTAMP)
     const query = `
       SELECT AVG(dna_v1) as avg_friction 
       FROM \`${process.env.BQ_PROJECT_ID}.behavioral_data.${TABLE_NAME}\`
-      WHERE event_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+      WHERE CAST(event_time AS TIMESTAMP) > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
     `;
     
     console.log(`Querying ${TABLE_NAME} in location ${BQ_LOCATION}...`);
     const [rows] = await bq.query({ query, location: BQ_LOCATION });
     
-    // Safety check for data
     const frictionScore = (rows && rows[0] && rows[0].avg_friction) 
       ? rows[0].avg_friction.toFixed(4) 
       : "0.0000";
