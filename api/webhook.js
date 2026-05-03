@@ -4,7 +4,7 @@ const GITHUB_REPO = process.env.GITHUB_REPO;
 
 // --- CONFIGURATION ---
 const TABLE_NAME = 'nexus_dna_discovery'; // Updated to match your actual BQ name
-const BQ_LOCATION = 'US'; // Double check if this is 'US' or 'us-central1' in BQ Details
+const BQ_LOCATION = 'us-central1'; // Double check if this is 'US' or 'us-central1' in BQ Details
 
 const bq = new BigQuery({
   projectId: process.env.BQ_PROJECT_ID,
