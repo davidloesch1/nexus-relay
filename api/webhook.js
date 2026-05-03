@@ -1,5 +1,61 @@
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO;
+const { BigQuery } = require('@google-cloud/bigquery');
+
+// Initializing the "Memory" connection
+const bq = new BigQuery({
+  projectId: process.env.BQ_PROJECT_ID,
+  credentials: {
+    client_email: process.env.BQ_CLIENT_EMAIL,
+    private_key: process.env.BQ_PRIVATE_KEY.replace(/\\n/g, '\n'), // Fixes formatting
+  },
+});
+
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') return res.status(200).send("Waiting...");
+
+  console.log("--- CONSULTING MEMORY AND BRAIN ---");
+
+  try {
+    // 1. The Memory Query: Look at today's Kinetic DNA
+    const query = `
+      SELECT AVG(dna_v1) as avg_friction 
+      FROM \`${process.env.BQ_PROJECT_ID}.behavioral_data.nexus_dna_discovery_view\`
+      WHERE event_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+    `;
+    
+    const [rows] = await bq.query(query);
+    const frictionScore = rows[0].avg_friction || 0;
+    
+    console.log("Current System Friction Score:", frictionScore);
+
+    // 2. The Brain Consult: Passing the DNA data to Gemini
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `Current site friction score is ${frictionScore}. 
+            A new error occurred: "${req.body.text}". 
+            How should we prioritize this fix?`
+          }]
+        }]
+      })
+    });
+
+    const aiData = await aiResponse.json();
+    const analysis = aiData.candidates[0].content.parts[0].text;
+
+    console.log("INTEGRATED ANALYSIS:", analysis);
+
+    return res.status(200).json({ status: "Success", friction: frictionScore, analysis });
+
+  } catch (err) {
+    console.error("CONNECTION FAILED:", err.message);
+    return res.status(200).json({ error: err.message });
+  }
+};
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(200).send("Waiting...");
