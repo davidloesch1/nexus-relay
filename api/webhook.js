@@ -11,8 +11,7 @@ export default async function handler(req, res) {
   const errorMessage = payload.text || "Test Connection";
   
   try {
-    const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-    
+const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;    
     const response = await fetch(apiURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
