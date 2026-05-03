@@ -1,57 +1,57 @@
-// Using module.exports for better compatibility with Vercel's default settings
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_REPO = process.env.GITHUB_REPO; // Format: username/repo
+
 module.exports = async (req, res) => {
-  console.log("--- NEXUS SURGERY INITIATED ---");
+  if (req.method !== 'POST') return res.status(200).send("Waiting...");
 
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(200).json({ message: 'Waiting for a signal...' });
-  }
+  const errorMessage = req.body.text || "Diagnostic test";
+  console.log("--- SURGERY INITIATED: " + errorMessage + " ---");
 
-  const payload = req.body;
-  const errorMessage = payload.text || "Unknown error";
-  
   try {
-    // 1. Ask Gemini for the fix AND the filename
+    // 1. Ask Gemini for the fix and the file
     const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `A website reported this error: "${errorMessage}". 
-            Based on common web structures, which file (e.g., index.html, script.js) is likely broken? 
-            Provide your answer in this exact JSON format: {"filename": "name", "fix": "1-sentence fix"}`
-          }]
-        }]
+        contents: [{ parts: [{ text: `Error: "${errorMessage}". Which file in a web project is likely broken? Return ONLY JSON: {"filename": "index.html", "fix": "add a null check"}` }] }]
+      })
+    });
+    const aiData = await aiResponse.json();
+    const { filename, fix } = JSON.parse(aiData.candidates[0].content.parts[0].text.replace(/```json|```/g, ""));
+
+    // 2. The GitHub Dance: Create a Branch
+    const branchName = `nexus-fix-${Date.now()}`;
+    const mainRef = await (await fetch(`https://api.github.com/repos/${GITHUB_REPO}/git/ref/heads/main`, {
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+    })).json();
+
+    await fetch(`https://api.github.com/repos/${GITHUB_REPO}/git/refs`, {
+      method: 'POST',
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha: mainRef.object.sha })
+    });
+
+    console.log(`Branch created: ${branchName}`);
+
+    // 3. Open a Pull Request (The "Proposal")
+    const prResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/pulls`, {
+      method: 'POST',
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `[Nexus Auto-Fix] Potential fix for: ${errorMessage}`,
+        head: branchName,
+        base: 'main',
+        body: `### Nexus Behavioral AI Analysis\n**Diagnosis:** ${fix}\n**Target File:** ${filename}\n\n*This PR was generated automatically by the Nexus Self-Healing system.*`
       })
     });
 
-    const aiData = await aiResponse.json();
-    
-    // Safety check: ensure we got a valid response
-    if (!aiData.candidates || !aiData.candidates[0]) {
-      throw new Error("AI Brain failed to provide a candidate.");
-    }
+    const prData = await prResponse.json();
+    console.log("SURGERY SUCCESSFUL: PR #" + prData.number);
 
-    const aiText = aiData.candidates[0].content.parts[0].text;
-    
-    // Clean up the AI text (sometimes it adds markdown code blocks)
-    const jsonString = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
-    const result = JSON.parse(jsonString);
-    
-    console.log("AI PROPOSAL:", result.fix);
-    console.log("TARGET FILE:", result.filename);
-
-    // 2. Respond to FullStory
-    return res.status(200).json({ 
-      status: "Proposing fix", 
-      file: result.filename,
-      fix: result.fix 
-    });
+    return res.status(200).json({ status: "PR Created", url: prData.html_url });
 
   } catch (err) {
-    console.error("SURGERY FAILED:", err.message);
-    // If it fails, we still send a 200 to keep FullStory happy
-    return res.status(200).json({ error: "Surgery failed", details: err.message });
+    console.error("SURGERY ABORTED:", err.message);
+    return res.status(200).json({ error: err.message });
   }
 };
