@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Our Site</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+            margin-bottom: 20px;
+        }
+        p {
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Our Website!</h1>
+        <p>We're glad you're here. This is the main page of our site.</p>
+        <p>Please explore our content or <a href="/contact">contact us</a> if you have any questions.</p>
+        <p>If you were expecting different content, please try refreshing the page or clearing your browser cache.</p>
+    </div>
+    <script>
+        // Simple script to log a message when the page loads successfully.
+        // If there were any client-side issues, this might help diagnose.
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('index.html loaded and parsed successfully.');
+        });
+    </script>
+</body>
+</html>
