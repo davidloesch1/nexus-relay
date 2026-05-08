@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Web Application</title>
+    <!-- Link to your main CSS file, e.g., <link rel="stylesheet" href="style.css"> -->
+</head>
+<body>
+    <div id="root">
+        <!-- This content will typically be replaced by your JavaScript application. -->
+        Loading application...
+    </div>
+    <!-- Link to your main JavaScript file, e.g., <script src="app.js"></script> -->
+    <script>
+        // A basic script to ensure the page is interactive or display a fallback.
+        document.addEventListener('DOMContentLoaded', () => {
+            const rootElement = document.getElementById('root');
+            if (rootElement && rootElement.innerHTML === 'Loading application...') {
+                // If no JavaScript app takes over, display a default welcome.
+                // In a real application, your main app.js would usually replace this.
+                rootElement.innerHTML = '<h1>Welcome!</h1><p>Your application is ready.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
